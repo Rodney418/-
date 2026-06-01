@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>適当診断</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+font-family:sans-serif;background:#0f172a;color:white;
+min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px
+}
+.card{
+width:100%;max-width:700px;background:#1e293b;border-radius:24px;
+padding:25px;box-shadow:0 0 40px rgba(0,0,0,.3)
+}
+h1{text-align:center;margin-bottom:20px}
+.input-area{display:flex;gap:10px;margin-bottom:20px}
+input{
+flex:1;padding:14px;border:none;border-radius:12px;font-size:16px;
+background:white;color:black;caret-color:black;
+}
+input::placeholder{color:#666}
+button{
+padding:14px 20px;border:none;border-radius:12px;background:#3b82f6;
+color:white;cursor:pointer;font-size:16px
+}
+#result{margin-top:20px}
+.stat{margin:12px 0}
+.label{display:flex;justify-content:space-between;margin-bottom:4px}
+.bar{height:12px;background:#334155;border-radius:999px;overflow:hidden}
+.fill{height:100%}
+canvas{margin:25px auto 0;display:block;width:100%;max-width:400px}
+.rank{text-align:center;font-size:32px;margin:15px 0;font-weight:bold}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>🎲 何％メーカー</h1>
+<div class="input-area">
+<input id="name" placeholder="名前を入力">
+<button onclick="diagnose()">診断</button>
+</div>
+<div id="result"></div>
+<canvas id="radar" width="400" height="400"></canvas>
+</div>
+
+<script>
+function hash(str){
+ let h=0;
+ for(let i=0;i<str.length;i++){
+   h=((h<<5)-h)+str.charCodeAt(i);
+   h|=0;
+ }
+ return Math.abs(h);
+}
+function value(seed,offset){ return ((seed*(offset+17))%101); }
+function color(v){
+ if(v>=90) return "#fbbf24";
+ if(v>=80) return "#22c55e";
+ if(v>=50) return "#3b82f6";
+ return "#94a3b8";
+}
+function rank(avg){
+ if(avg>=90) return "S";
+ if(avg>=75) return "A";
+ if(avg>=60) return "B";
+ if(avg>=40) return "C";
+ return "D";
+}
+function diagnose(){
+ const name=document.getElementById("name").value.trim();
+ if(!name){ alert("名前を入力してください"); return; }
+
+ const seed=hash(name);
+ const stats=[
+ ["ゲーム力",value(seed,1)],
+ ["勉強力",value(seed,2)],
+ ["運",value(seed,3)],
+ ["コミュ力",value(seed,4)],
+ ["集中力",value(seed,5)],
+ ["寝坊率",value(seed,6)]
+ ];
+
+ let html="<h2 style='text-align:center'>"+name+"</h2>";
+ let total=0;
+
+ stats.forEach(([label,val])=>{
+   total+=val;
+   html+=`<div class="stat">
+   <div class="label"><span>${label}</span><span>${val}%</span></div>
+   <div class="bar"><div class="fill" style="width:${val}%;background:${color(val)}"></div></div>
+   </div>`;
+ });
+
+ html+=`<div class="rank">総合ランク ${rank(Math.round(total/stats.length))}</div>`;
+ document.getElementById("result").innerHTML=html;
+ drawRadar(stats);
+}
+
+function drawRadar(stats){
+ const canvas=document.getElementById("radar");
+ const ctx=canvas.getContext("2d");
+ const cx=200, cy=200, radius=140;
+ ctx.clearRect(0,0,400,400);
+ const count=stats.length;
+
+ for(let layer=1;layer<=5;layer++){
+   const r=radius*layer/5;
+   ctx.beginPath();
+   for(let i=0;i<count;i++){
+     const a=(Math.PI*2/count)*i-Math.PI/2;
+     const x=cx+Math.cos(a)*r;
+     const y=cy+Math.sin(a)*r;
+     if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+   }
+   ctx.closePath(); ctx.strokeStyle="#334155"; ctx.stroke();
+ }
+
+ stats.forEach((s,i)=>{
+   const a=(Math.PI*2/count)*i-Math.PI/2;
+   const x=cx+Math.cos(a)*radius;
+   const y=cy+Math.sin(a)*radius;
+   ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x,y);
+   ctx.strokeStyle="#475569"; ctx.stroke();
+   ctx.fillStyle="white"; ctx.textAlign="center";
+   ctx.fillText(s[0],x,y);
+ });
+
+ ctx.beginPath();
+ stats.forEach((s,i)=>{
+   const a=(Math.PI*2/count)*i-Math.PI/2;
+   const r=radius*(s[1]/100);
+   const x=cx+Math.cos(a)*r;
+   const y=cy+Math.sin(a)*r;
+   if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+ });
+ ctx.closePath();
+ ctx.fillStyle="rgba(59,130,246,0.4)";
+ ctx.strokeStyle="#60a5fa";
+ ctx.lineWidth=3;
+ ctx.fill();
+ ctx.stroke();
+}
+</script>
+</body>
+</html>
